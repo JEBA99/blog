@@ -36,24 +36,38 @@ class Post {
         // $files = File::files(resource_path("posts/"));
         
         // return array_map(fn($file) => $file->getContents(), $files);
-        return collect(File::files(resource_path("posts")))
-        ->map(fn($file) => YamlFrontMatter::parseFile($file))
-        ->map(fn($document) =>            
-            new Post(
-                $document -> title,
-                $document -> excerpt,
-                $document -> date,
-                $document -> body(),
-                $document -> slug,
-        ));
+        return cache()->rememberForever('posts.all', function() {
+            return collect(File::files(resource_path("posts")))
+                ->map(fn($file) => YamlFrontMatter::parseFile($file))
+                ->map(fn($document) =>            
+                    new Post(
+                        $document -> title,
+                        $document -> excerpt,
+                        $document -> date,
+                        $document -> body(),
+                        $document -> slug,
+                ))
+                ->sortByDesc('date');
+        });
+        
         // return array_map(function ($file) {
         //     return $file->getContents();
         // }, $files);
     }
 
     public static function find($slug) {
-
         return static::all()->firstWhere('slug', $slug);
+    }
+
+    public static function findOrFail($slug) {
+
+        $post = static::find($slug);
+
+        if(! $post) {
+            throw new ModelNotFoundException();
+        }
+
+        return $post;
         // dd($posts->firstWhere('slug', $slug));
         // if(! file_exists( $path = resource_path("posts/{$slug}.html"))) {
         //     throw new ModelNotFoundException();
