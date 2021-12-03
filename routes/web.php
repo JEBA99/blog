@@ -1,8 +1,13 @@
 <?php
 use App\Models\Post;
 use App\Models\Category;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostCommentsController;
+use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\SessionsController;
 use Illuminate\Support\Facades\Route;
 use Spatie\YamlFrontMatter\YamlFrontMatter;
+use Illuminate\Support\Facades\Gate;
 
 
 /*
@@ -17,9 +22,38 @@ use Spatie\YamlFrontMatter\YamlFrontMatter;
 */
 
 Route::get('/', function () {
-    return view('posts', [
-        'posts' => Post::all() 
-    ]);
+    \Illuminate\Support\Facades\DB::listen(function ($query) {
+        logger($query->sql, $query -> bindings);
+    });
+    // $post = Post::where('user_id',auth()->user()->id)->get();
+    if(auth()->user()) {
+            return view('posts', [
+            'posts' => Post:: where('user_id',auth()->user()->id)->get()
+        ]);
+    }
+    else {
+        return view('posts', [
+            'posts' => Post:: with('category')->get()
+        ]);
+    }
+    // ddd($post);
+    // ddd(GATE::allows('admin'));
+    // $posts = Post::with('category')->with('user')->get();
+    // ddd($posts);
+    // $posts = array_map(function ($post) {
+    //         return (auth()->user()->id == $post->user_id) ? $post : "";
+    //     }, $posts);                  
+                    
+    
+    
+    
+    // $post = $post::with('user')->get();
+    // ddd($user);
+    // ddd($posts);
+    // return view('posts', [
+    //     'posts' => Post::with('category')->get()
+    //     // 'posts' => Post::all() 
+    // ]);
 });
 
 // Route::get('posts/{post}', function ($id) {
@@ -91,5 +125,23 @@ Route::get('categories/{category:slug}', function (Category $category) {
   
     // return $slug;
     // return view('post', [
-    //     'post' => file_get_contents(__DIR__ . '/../resources/posts/my-third-post.html')
-    // ]);
+        // Post::findOrFail($id)    // ]);
+Route::get('admin/posts/create', [PostController::class, 'create']);
+
+Route::get('admin/posts/show/{post:slug}', [PostController::class, 'show']);
+
+Route::post('admin/posts', [PostController::class, 'store']);
+
+Route::post('admin/posts/update/{post:slug}', [PostController::class, 'update']);
+
+Route::delete('admin/posts/{post:slug}', [PostController::class, 'destroy']);
+
+Route::post('posts/{post:slug}/comments', [PostCommentsController::class, 'store'])->middleware('isadmin');
+
+Route::get('register', [RegisterController::class, 'create'])->middleware('guest');
+Route::post('register', [RegisterController::class, 'store'])->middleware('guest');
+
+Route::get('login', [SessionsController::class, 'create'])->middleware('guest');
+Route::post('login', [SessionsController::class, 'store'])->middleware('guest');
+
+Route::post('logout', [SessionsController::class, 'destroy'])->middleware('auth');
